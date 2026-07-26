@@ -1,0 +1,73 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: pulse_test
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create .env for CI
+        run: |
+          cat > .env << 'EOF'
+          DJANGO_SECRET_KEY=ci-test-secret-key-not-for-prod
+          DEBUG=True
+          DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+          DB_NAME=pulse_test
+          DB_USER=pulse
+          DB_PASSWORD=pulse
+          DB_HOST=localhost
+          DB_PORT=5432
+          REDIS_URL=redis://localhost:6379/0
+          CELERY_BROKER_URL=redis://localhost:6379/0
+          CELERY_RESULT_BACKEND=redis://localhost:6379/0
+          EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+          DEFAULT_FROM_EMAIL=test@example.com
+          LOG_LEVEL=INFO
+          EOF
+
+      - name: Run migrations
+        run: |
+          cd src
+          python manage.py migrate
+
+      - name: Run tests
+        run: |
+          cd src
+          pytest core/tests/ -v
