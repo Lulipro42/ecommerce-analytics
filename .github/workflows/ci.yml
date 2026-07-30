@@ -1,5 +1,4 @@
-# .github/workflows/ci.yml
-name: CI
+name: Django CI
 
 on:
   push:
@@ -8,40 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_DB: pulse_test
-          POSTGRES_USER: pulse
-          POSTGRES_PASSWORD: pulse
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - uses: actions/checkout@v4
 
       - name: Create .env for CI
         run: |
@@ -52,22 +22,30 @@ jobs:
           DB_NAME=pulse_test
           DB_USER=pulse
           DB_PASSWORD=pulse
-          DB_HOST=localhost
+          DB_HOST=db
           DB_PORT=5432
-          REDIS_URL=redis://localhost:6379/0
-          CELERY_BROKER_URL=redis://localhost:6379/0
-          CELERY_RESULT_BACKEND=redis://localhost:6379/0
+          REDIS_URL=redis://redis:6379/0
+          CELERY_BROKER_URL=redis://redis:6379/0
+          CELERY_RESULT_BACKEND=redis://redis:6379/0
           EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
           DEFAULT_FROM_EMAIL=test@example.com
           LOG_LEVEL=INFO
           EOF
 
-      - name: Run migrations
+      - name: Build and Run Services
         run: |
-          cd src
-          python manage.py migrate
+          docker compose build
+          docker compose up -d
 
-      - name: Run tests
+      - name: Wait for services to be healthy
         run: |
-          cd src
-          pytest core/tests/ -v
+          # Esperamos a que los healthchecks pasen
+          sleep 15
+
+      - name: Run Migrations
+        run: |
+          docker compose exec -T web python manage.py migrate
+
+      - name: Run Tests
+        run: |
+          docker compose exec -T web pytest core/tests/ -v
