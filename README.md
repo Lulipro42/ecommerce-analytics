@@ -223,4 +223,18 @@ MIT — Libre para uso y modificación.
 
 ---
 
-*Nota para reclutadores: Este proyecto fue construido por un desarrollador de 17 años aprendiendo de forma autodidacta. El código, los tests y las decisiones de arquitectura son 100% originales.*
+## Deuda técnica conocida
+
+1. **Tests de Celery en modo eager:** Los tests usan `CELERY_TASK_ALWAYS_EAGER=True`, 
+   lo que ejecuta las tareas síncronamente. En producción, las tareas corren en workers 
+   separados. Para testear el comportamiento real async, se necesitaría `pytest-celery` 
+   o un entorno de integración.
+
+2. **Cache invalidation en test:** El test de invalidación de cache pasa porque Celery 
+   es eager. En producción, hay un delay entre `createEvent` y `procesar_evento` que 
+   invalida el cache.
+
+3. **Nombre de función `generar_csv`:** Originalmente guardaba JSON, no CSV. 
+   Corregido en [fecha].
+
+
