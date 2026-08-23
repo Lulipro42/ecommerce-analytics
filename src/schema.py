@@ -109,7 +109,7 @@ class Mutation:
 
             transaction.on_commit(
                 lambda: ejecutar_pipeline_reporte(
-                    reporte_id=str(reporte.id),
+                    reporte_id=reporte_id_str,
                     fecha_desde=fecha_desde,
                     fecha_hasta=fecha_hasta,
                 )

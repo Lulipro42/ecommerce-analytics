@@ -54,15 +54,14 @@ def test_crear_reporte_dispara_pipeline_y_completada(graphql_client, event_facto
     assert data['status'] == 'pending'
     reporte_id = data['id']
     
-    
     reporte = Reporte.objects.get(id=reporte_id)
     assert reporte.status == 'completed'
     assert reporte.result_data is not None
     assert 'ventas_totales' in reporte.result_data
-    assert reporte.result_data['ventas_totales'] == 1
-    assert reporte.result_data['vistas_totales'] == 1    
-    
-    
+    assert reporte.result_data['ventas_totales'] == Decimal('150.00')  
+    assert reporte.result_data['vistas_totales'] == 1
+    assert reporte.file_path is not None  
+
 @pytest.mark.django_db(transaction=True)
 def test_create_event_invalida_cache_dashboard(graphql_client, event_factory, settings):
     cache.delete('dashboard_stats')
