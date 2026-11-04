@@ -86,9 +86,9 @@ def agregar_datos(self, datos):
             'vistas_totales': vistas_count,
             'total_eventos': datos['total_eventos'],
             }
-    except Exception as exec:
-        logger.error(f"Error en agregar datos: {exec}")
-        raise self.retry(exec=exec, countdown=5)
+    except Exception as exc:
+        logger.error(f"Error en agregar datos: {exc}")
+        raise self.retry(exc=exc, countdown=5)
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=5)
 def generar_csv(self, datos_agregados):
@@ -117,9 +117,9 @@ def generar_csv(self, datos_agregados):
             'reporte_id':reporte_id,
             'mensaje': f"Reporte: {reporte_id} completado",
         }
-    except Exception as exec:
-        logger.error(f"Error en generar csv: {exec}")
-        raise self.retry(exec=exec, countdown=5)
+    except Exception as exc:
+        logger.error(f"Error en generar csv: {exc}")
+        raise self.retry(exec=exc, countdown=5)
 
 
 @shared_task

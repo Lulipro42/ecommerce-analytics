@@ -32,3 +32,10 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Reportes y archivos generados
+src/reportes/
+*.csv
+
+# Celery
+celerybeat-schedule*

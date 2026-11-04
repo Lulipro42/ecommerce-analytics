@@ -34,6 +34,7 @@ class Event(models.Model):
             raise ValidationError(f"'{self.event_type}' no es un tipo de evento valido")
         
     def save(self, *args, **kwargs):
+        self.clean()
         super().save(*args, **kwargs)
     
     def __str__(self):
