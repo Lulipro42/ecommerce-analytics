@@ -50,8 +50,8 @@ class AlertaType:
 @strawberry.type
 class Query:
     @strawberry.field
-    def events(self) -> list[EventType]:
-        return Event.objects.all()
+    def events(self, limit: int = 50, offset: int = 0) -> list[EventType]:
+        return Event.objects.all()[offset : offset + limit]
 
     @strawberry.field
     def dashboard_stats(self) -> DashboardStats:
@@ -109,7 +109,7 @@ class Mutation:
 
             transaction.on_commit(
                 lambda: ejecutar_pipeline_reporte(
-                    reporte_id=reporte_id_str,
+                    reporte_id=reporte_id,
                     fecha_desde=fecha_desde,
                     fecha_hasta=fecha_hasta,
                 )

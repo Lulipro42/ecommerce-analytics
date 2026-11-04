@@ -236,5 +236,3 @@ MIT — Libre para uso y modificación.
 
 3. **Nombre de función `generar_csv`:** Originalmente guardaba JSON, no CSV. 
    Corregido en [fecha].
-
-

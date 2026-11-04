@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from django.db.models import Sum, DecimalField
 from django.db.models.functions import Cast
+from django.db import IntegrityError
 from django.db.models.fields.json import KeyTextTransform
 from .models import Event, Reporte, Alerta
 import logging
@@ -87,7 +88,7 @@ def agregar_datos(self, datos):
             }
     except Exception as exec:
         logger.error(f"Error en agregar datos: {exec}")
-        raise self.retry(exec=exec)
+        raise self.retry(exec=exec, countdown=5)
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=5)
 def generar_csv(self, datos_agregados):
@@ -118,7 +119,7 @@ def generar_csv(self, datos_agregados):
         }
     except Exception as exec:
         logger.error(f"Error en generar csv: {exec}")
-        raise self.retr(exec=exec)
+        raise self.retry(exec=exec, countdown=5)
 
 
 @shared_task
@@ -142,18 +143,6 @@ def ejecutar_pipeline_reporte(reporte_id, fecha_desde, fecha_hasta):
 
 
 def _sum_payload_amount(event_type, timestamp_gte, timestamp_lt):
-    """
-    Suma payload->>'amount' casteando a Decimal vía el ORM.
-
-    OJO: el bug original era usar Sum('payload__amount') directo sobre un
-    JSONField. Eso genera SUM(payload -> 'amount') en Postgres, que es de
-    tipo jsonb, y Postgres no tiene una función SUM(jsonb) -> la tarea
-    fallaba con una excepción no capturada y nunca llegaba a crear alertas.
-
-    La solución: extraer el valor como texto (KeyTextTransform) y castearlo
-    explícitamente a DecimalField antes de sumar, todo dentro del ORM
-    (portable entre backends, sin SQL crudo ni nombres de tabla hardcodeados).
-    """
     total = Event.objects.filter(
         event_type=event_type,
         timestamp__gte=timestamp_gte,
@@ -189,7 +178,6 @@ def verificar_alertas_ventas(self):
             hora_anterior_fin,
         )
 
-        # Evitar falsos positivos si no hay datos históricos
         if ventas_anterior == 0:
             _resolver_alertas_si_existen()
             return "Sin datos históricos, sin alerta"
@@ -197,15 +185,17 @@ def verificar_alertas_ventas(self):
         cambio = (ventas_actual - ventas_anterior) / ventas_anterior
 
         if cambio <= -0.20:
-            # Evitar duplicados
-            if not Alerta.objects.filter(alert_type='sales_drop', resolved=False).exists():
+            try:
                 Alerta.objects.create(
-                    alert_type='sales_drop',
+                    alert_tpyer='sales_drop',
                     message=f"Ventas cayeron {abs(cambio):.1%} (de ${ventas_anterior:.2f} a ${ventas_actual:.2f})",
                     severity='high' if cambio <= -0.50 else 'medium',
                 )
-                return f"Alerta creada: caída {cambio:.1%}"
-            return "Alerta ya existe"
+                return f"Alerta creada: caida {cambio:.1%}"
+        
+            except IntegrityError:
+                return "Alerta ya existe (bloqueado por restricciones de Base de Datos)"
+
 
         _resolver_alertas_si_existen()
         return f"Sin alerta ({cambio:+.1%})"

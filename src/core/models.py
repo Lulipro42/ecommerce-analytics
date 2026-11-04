@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from django.core.exceptions import ValidationError
 
 class Event(models.Model):
     EVENT_TYPES = [
@@ -25,6 +26,17 @@ class Event(models.Model):
         ]
         ordering = ['-timestamp']
         
+    def clean(self):
+        super().clean()
+        
+        valid_types = [choice[0] for choice in self.EVENT_TYPES]
+        if self.event_type not in valid_types:
+            raise ValidationError(f"'{self.event_type}' no es un tipo de evento valido")
+        
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return f"{self.event_type} @ {self.timestamp.isoformat()}"
     
@@ -67,6 +79,13 @@ class Alerta(models.Model):
     
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['alert_type'],
+                condition=models.Q(resolved=False),
+                name='unica_alerta_activa_por_tipo'
+            )
+        ]
         
     def __str__(self):
         return f"Alerta {self.alert_type} ({self.severity})"
