@@ -51,8 +51,8 @@ def extraer_datos(self, reporte_id, fecha_desde, fecha_hasta):
             logger.warning(f"Reporte {reporte_id}: 0 eventos en el rango")
         
         return {
-            'reporte_id': reporte_id,
-            'eventos_ids': list(eventos.values_list('id', flat=True)),
+            'reporte_id': str(reporte_id),
+            'eventos_ids': [str(e_id) for e_id in eventos.values_list('id', flat=True)],
             'total_eventos': total,
         }
     except Reporte.DoesNotExist:
@@ -70,7 +70,7 @@ def agregar_datos(self, datos):
     
         eventos = Event.objects.filter(id__in=eventos_ids)
     
-        ventas_monto = eventos.filter(event_type='purchase').aggregate(total=Sum(
+        ventas_monto = eventos.filter(event_type='purchase_completed').aggregate(total=Sum(
             Cast(
                 KeyTextTransform('amount', 'payload'),
                 output_field=DecimalField(max_digits=12, decimal_places=2)
@@ -82,7 +82,7 @@ def agregar_datos(self, datos):
 
         return {
             'reporte_id': reporte_id,
-            'ventas_totales': ventas_monto,  # ← Ahora es monto, no count
+            'ventas_totales': str(ventas_monto),  
             'vistas_totales': vistas_count,
             'total_eventos': datos['total_eventos'],
             }
@@ -187,7 +187,7 @@ def verificar_alertas_ventas(self):
         if cambio <= -0.20:
             try:
                 Alerta.objects.create(
-                    alert_tpyer='sales_drop',
+                    alert_type='sales_drop',
                     message=f"Ventas cayeron {abs(cambio):.1%} (de ${ventas_anterior:.2f} a ${ventas_actual:.2f})",
                     severity='high' if cambio <= -0.50 else 'medium',
                 )

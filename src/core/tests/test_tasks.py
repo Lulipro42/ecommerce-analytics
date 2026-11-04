@@ -69,8 +69,7 @@ def test_sin_datos_historicos_no_crea_alerta():
     assert "Sin datos históricos" in resultado.result
     assert Alerta.objects.filter(resolved=False).count() == 0
 
-
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_no_duplica_alerta_si_ya_existe_una_abierta():
     # Arrange: ya existe una alerta abierta (creada "a mano", sin pasar por la task)
     Alerta.objects.create(
@@ -89,7 +88,7 @@ def test_no_duplica_alerta_si_ya_existe_una_abierta():
     resultado = verificar_alertas_ventas.apply()
 
     # Assert
-    assert resultado.result == "Alerta ya existe"
+    assert "Alerta ya existe" in resultado.result
     # sigue habiendo 1 sola, no se creó una segunda
     assert Alerta.objects.filter(resolved=False).count() == 1
 

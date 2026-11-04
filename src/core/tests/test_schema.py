@@ -1,5 +1,6 @@
 from django.core.cache import cache
 import pytest
+from decimal import Decimal
 from core.models import Reporte
 
 
@@ -58,7 +59,7 @@ def test_crear_reporte_dispara_pipeline_y_completada(graphql_client, event_facto
     assert reporte.status == 'completed'
     assert reporte.result_data is not None
     assert 'ventas_totales' in reporte.result_data
-    assert reporte.result_data['ventas_totales'] == Decimal('150.00')  
+    assert Decimal(reporte.result_data['ventas_totales']) == Decimal('150.00')
     assert reporte.result_data['vistas_totales'] == 1
     assert reporte.file_path is not None  
 
